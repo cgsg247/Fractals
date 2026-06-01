@@ -36,10 +36,12 @@
             float FRAME_W = 800.0, FRAME_H = 800.0;
             float X1 = 2.0, X0 = -2.0, Y1 = 2.0, Y0 = -2.0;
         
-            float ys = gl_FragCoord.y + u_mouse_y;
-            float xs = gl_FragCoord.x - u_mouse_x;
+            float ys = gl_FragCoord.y;// + u_mouse_y;
+            float xs = gl_FragCoord.x;// - u_mouse_x;
 
             vec2 Z = vec2((xs * (X1 - X0) / FRAME_W + X0) / u_mouse_wheel, (ys * (Y1 - Y0) / FRAME_H + Y0) / u_mouse_wheel);
+            Z.x += u_mouse_x;
+            Z.y -= u_mouse_y;
             vec2 Z0 = Z;
             
             while (n < 255.0 && (Z.x * Z.x + Z.y * Z.y) < 4.0)
@@ -72,16 +74,18 @@
             return shader;
         }
 
-        let globalOffset = {
-            globalX: 0,
-            globalY: 0            
-        };
         let mouse_wheel = 1;
+
+        let mouseX = 0.0, mouseY = 0.0;
+        let isGrab = false;
+        let lastMouseX = 0, lastMouseY = 0;
 
         let u_time_location;
         let u_mouse_x;
         let u_mouse_y;
         let u_mouse_wheel;
+
+        let FRAME_W = 800.0, FRAME_H = 800.0;
          
         function initShaders() {
 
@@ -127,8 +131,8 @@
 
             timeFromStart = new Date().getMilliseconds() - startTime;
             gl.uniform1f(u_time_location, timeFromStart / 1000.0);
-            gl.uniform1f(u_mouse_x, globalOffset.globalX);
-            gl.uniform1f(u_mouse_y, globalOffset.globalY);
+            gl.uniform1f(u_mouse_x, mouseX);
+            gl.uniform1f(u_mouse_y, mouseY);
             gl.uniform1f(u_mouse_wheel, mouse_wheel);
 
             gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -138,10 +142,34 @@
         function onStart() {
             let canvas = document.getElementById("webgl-canvas");
 
+            /* Mouse button pressed*/
+            canvas.onmousedown = (ev) => {
+                  if (ev.button === 0) { 
+                    isGrab = true;
+                    lastMouseX = ev.offsetX;
+                    lastMouseY = ev.offsetY;
+                }
+            };
+
+            /* Mouse moved */
             canvas.onmousemove = (ev) => {
-                console.log(`(${ev.x}, ${ev.y})`);
-                globalOffset.globalX = ev.offsetX;;
-                globalOffset.globalY = ev.offsetY;      
+                if (isGrab) {
+                    console.log(`(${ev.x}, ${ev.y})`);
+                    const dx = ev.offsetX - lastMouseX;
+                    const dy = ev.offsetY - lastMouseY;
+                    const stepx = 4.0 / FRAME_W;
+                    const stepy = 4.0 / FRAME_H;
+
+                    mouseX -= dx * stepx / mouse_wheel;
+                    mouseY -= dy * stepy / mouse_wheel;
+                    lastMouseX = ev.offsetX;
+                    lastMouseY = ev.offsetY;
+                }
+            };
+
+            /* Mouse button unpressed */
+            canvas.onmouseup = () => {
+                  isGrab = false;
             };
 
             canvas.onwheel = (ev) => {
@@ -167,7 +195,7 @@
 
 <body onload="onStart();">
     <h2><a href="file:///Z:/AA3/SummerPractice/main.html">menu</a></h2>    
-    <canvas id="webgl-canvas" style="border: none" width="800" height="800"></canvas>
+    <canvas id="webgl-canvas" style="border: none;" width="800" height="800"></canvas>
 </form>
 </body>
 
